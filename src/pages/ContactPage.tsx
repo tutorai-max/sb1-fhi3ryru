@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Building2, Send, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext'; // 追加
 
 interface FormData {
   type: string[];
@@ -24,6 +25,7 @@ export default function ContactPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
+  const { currentUser } = useAuth(); // 追加
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -45,6 +47,7 @@ export default function ContactPage() {
     const submitData = {
       ...formData,
       type: formData.type.join(','),
+      signed_in_email: currentUser?.email || '',  // ← ここで追加！
     };
 
     try {

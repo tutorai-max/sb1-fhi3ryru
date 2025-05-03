@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
   try {
     validateResendConfig();
 
-    const { contact_email } = await req.json();
+    const { contact_email, signed_in_email } = await req.json();
 
     if (!contact_email) {
       throw new Error('Missing contact_email in request body');
@@ -53,34 +53,39 @@ Deno.serve(async (req) => {
 
     const signatureLink = `${Deno.env.get('PUBLIC_URL')}/sign/`; // applicationId無いので仮リンク
 
-    const { error: resendError } = await resend.emails.send({
-      from: 'AquaTutorAI <info@aquatutorai.jp>',
-      to: contact_email,
-      subject: '契約書の確認とご署名のお願い',
-      html: `
-<!DOCTYPE html>
-<html>
-<body>
-  <p>契約書のご確認をお願いいたします。</p>
-  <p>以下のリンクから契約書の内容をご確認いただき、ご署名をお願いいたします。</p>
-  <p><a href="${signatureLink}">契約書の確認とご署名</a></p>
-  <p style="color: #666; font-size: 12px;">※本メールに心当たりがない場合は、破棄していただきますようお願いいたします。</p>
-</body>
-</html>
-      `,
-      text: `
-契約書のご確認をお願いいたします。
+    const toList = ["info@aquatutorai.jp", contact_email, signed_in_email].filter(Boolean); // null/undefined除去
 
-以下のリンクから契約書の内容をご確認いただき、ご署名をお願いいたします。
-${signatureLink}
-
-※本メールに心当たりがない場合は、破棄していただきますようお願いいたします。
-      `
-    });
-
-    if (resendError) {
-      throw new Error(resendError.message);
+    for (const to of toList) {
+      const { error: resendError } = await resend.emails.send({
+        from: 'AquaTutorAI <info@aquatutorai.jp>',
+        to,
+        subject: '契約書の確認とご署名のお願い',
+        html: `
+    <!DOCTYPE html>
+    <html>
+    <body>
+      <p>契約書のご確認をお願いいたします。</p>
+      <p>以下のリンクから契約書の内容をご確認いただき、ご署名をお願いいたします。</p>
+      <p><a href="${signatureLink}">契約書の確認とご署名</a></p>
+      <p style="color: #666; font-size: 12px;">※本メールに心当たりがない場合は、破棄していただきますようお願いいたします。</p>
+    </body>
+    </html>
+        `,
+        text: `
+    契約書のご確認をお願いいたします。
+    
+    以下のリンクから契約書の内容をご確認いただき、ご署名をお願いいたします。
+    ${signatureLink}
+    
+    ※本メールに心当たりがない場合は、破棄していただきますようお願いいたします。
+        `
+      });
+    
+      if (resendError) {
+        throw new Error(`送信先 ${to} でエラー: ${resendError.message}`);
+      }
     }
+    
 
     return new Response(
       JSON.stringify({ message: 'Contract sent successfully' }),
