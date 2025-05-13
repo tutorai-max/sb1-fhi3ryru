@@ -28,6 +28,7 @@ interface FormData {
 }
 
 export default function ApplyPage() {
+  const { currentUser } = useAuth(); // 追加
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<Step>('contract');
   const [formData, setFormData] = useState<FormData>({
@@ -98,7 +99,6 @@ export default function ApplyPage() {
     if (currentStep === 'contract') {
       setCurrentStep('company');
     } else if (currentStep === 'company') {
-      const { currentUser } = useAuth(); // 追加
       const submitData = {
         ...formData,
         signed_in_email: currentUser?.email || '',  // ← ここで追加！
