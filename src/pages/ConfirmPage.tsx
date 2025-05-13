@@ -51,26 +51,26 @@ export default function ConfirmPage() {
       if (saveError)
         throw new Error(`Save Application Error: ${saveError.message}`);
 
-      // 2. PDF を生成し、メールを送信
-      const { error: pdfError } = await supabase.functions.invoke(
-        'generate-pdf-and-email',
-        {
-          body: { ...formData },
-        }
-      );
-      console.error('pdfError:', pdfError);
-      if (pdfError) throw new Error(`Generate PDF Error: ${pdfError.message}`);
+      // // 2. PDF を生成し、メールを送信
+      // const { error: pdfError } = await supabase.functions.invoke(
+      //   'generate-pdf-and-email',
+      //   {
+      //     body: { ...formData },
+      //   }
+      // );
+      // console.error('pdfError:', pdfError);
+      // if (pdfError) throw new Error(`Generate PDF Error: ${pdfError.message}`);
 
-      // 3. 契約を確認
-      const { error: confirmError } = await supabase.functions.invoke(
-        'confirm-contract',
-        {
-          body: { ...formData },
-        }
-      );
-      console.error('confirmError:', confirmError);
-      if (confirmError)
-        throw new Error(`Confirm Contract Error: ${confirmError.message}`);
+      // // 3. 契約を確認
+      // const { error: confirmError } = await supabase.functions.invoke(
+      //   'confirm-contract',
+      //   {
+      //     body: { ...formData },
+      //   }
+      // );
+      // console.error('confirmError:', confirmError);
+      // if (confirmError)
+      //   throw new Error(`Confirm Contract Error: ${confirmError.message}`);
 
       // 成功したらダッシュボードに遷移
       navigate('/dashboard', {

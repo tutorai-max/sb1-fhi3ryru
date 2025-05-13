@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, ArrowLeft } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext'; // 追加
 
 // ステップの型定義
 type Step = 'contract' | 'company';
@@ -97,8 +98,13 @@ export default function ApplyPage() {
     if (currentStep === 'contract') {
       setCurrentStep('company');
     } else if (currentStep === 'company') {
+      const { currentUser } = useAuth(); // 追加
+      const submitData = {
+        ...formData,
+        signed_in_email: currentUser?.email || '',  // ← ここで追加！
+      };
       // ConfirmPage.tsx にフォームデータを渡して遷移
-      navigate('/confirm', { state: { formData } });
+      navigate('/confirm', { state: { formData: submitData }});
     }
   };
 

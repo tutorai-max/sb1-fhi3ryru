@@ -1,111 +1,192 @@
+// === 必要ヘッダ ──────────────────────────
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin":  "*",
+  "Access-Control-Allow-Methods":"POST, OPTIONS",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
-import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
-import { Resend } from 'npm:resend@3.2.0';
+// === 外部ライブラリ ──────────────────────
+import { createClient } from "npm:@supabase/supabase-js@2.39.7";
+import { Resend       } from "npm:resend@3.2.0";
+import { PDFDocument, StandardFonts, rgb } from "npm:pdf-lib@1.17.1";
 
-function validateResendConfig() {
-  const required = ['RESEND_API_KEY', 'SUPABASE_URL', 'SUPABASE_ANON_KEY', 'PUBLIC_URL'];
-  const missing = required.filter((key) => !Deno.env.get(key));
-
-  if (missing.length > 0) {
-    throw new Error(`Missing required configuration: ${missing.join(', ')}`);
-  }
+// === 環境変数チェック ────────────────────
+function validateEnv() {
+  const req = [
+    "RESEND_API_KEY",
+    "SUPABASE_URL",
+    "SUPABASE_ANON_KEY",
+    "PUBLIC_URL",
+  ];
+  const miss = req.filter((k) => !Deno.env.get(k));
+  if (miss.length) throw new Error(`Missing env: ${miss.join(", ")}`);
 }
 
+// === フォーム型定義 ──────────────────────
+interface FormData {
+  company_name      : string;
+  postal_code       : string;
+  prefecture        : string;
+  city              : string;
+  sub_area          : string;
+  building_room     : string;
+  representative_name: string;
+  contact_person    : string;
+  contact_phone     : string;
+  contact_email     : string;
+  initial_fee       : string;
+  monthly_fee       : string;
+  excess_fee        : string;
+  option_fee        : string;
+  payment_method    : string;
+  notes             : string;
+}
+
+// === PDF を生成して Uint8Array で返す ────
+async function makePdf(d: FormData): Promise<Uint8Array> {
+  const pdf  = await PDFDocument.create();
+  const page = pdf.addPage([595, 842]);              // A4
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+
+  const write = (() => {
+    let y = 800;
+    return (label: string, value: string) => {
+      page.drawText(`${label}: ${value}`, {
+        x: 40, y, font, size: 11, color: rgb(0, 0, 0),
+      });
+      y -= 20;
+    };
+  })();
+
+  write("会社名", d.company_name);
+  write("郵便番号", d.postal_code);
+  write("都道府県", d.prefecture);
+  write("市区町村", d.city);
+  write("番地等", d.sub_area);
+  write("建物/部屋", d.building_room);
+  write("代表者名", d.representative_name);
+  write("ご担当者", d.contact_person);
+  write("電話番号", d.contact_phone);
+  write("メール", d.contact_email);
+  write("初期費用", d.initial_fee);
+  write("月額費用", d.monthly_fee);
+  write("超過費用", d.excess_fee);
+  write("オプション費用", d.option_fee);
+  write("支払方法", d.payment_method);
+  write("備考", d.notes);
+
+  return pdf.save();
+}
+
+// === サーバ (Deno.serve) ──────────────────
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  // Pre‑flight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    validateResendConfig();
+    validateEnv();
 
-    const { contact_email, signed_in_email } = await req.json();
+    /* ---------- リクエストボディ ---------- */
+    const body = await req.json();
 
-    if (!contact_email) {
-      throw new Error('Missing contact_email in request body');
-    }
+    // メール関係
+    const contact_email   = body.contact_email   as string | undefined;
+    const signed_in_email = body.signed_in_email as string | undefined;
+    if (!contact_email) throw new Error("contact_email は必須です");
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    // フォーム (PDF / DB 共通)
+    const form: FormData = body as FormData;
+
+    /* ---------- ① Supabase ---------- */
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")  ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
     );
 
-    // --- 将来DB更新を再開する場合のためコメントアウト保存 ---
-    /*
-    const { error: updateError } = await supabaseClient
-      .from('applications')
-      .update({
-        status: 'under_review',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', applicationId);
+    // ── profiles から applicant / sales_rep の uuid を取得 ──
+    const { data: profile, error: profileErr } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", signed_in_email)
+      .single();
 
-    if (updateError) throw updateError;
-    */
-    // ---------------------------------------------------------
+    if (profileErr || !profile) {
+      console.error("body Err:", body);
+      console.error("contact_email Err:", contact_email);
+      console.error("signed_in_email Err:", signed_in_email);
+      console.error("profiles Err:", profileErr);
+      throw new Error("profiles からユーザ ID を取得できませんでした");
+    }
 
-    const resend = new Resend(Deno.env.get('RESEND_API_KEY') ?? '');
+    // ── applications へ INSERT ──
+    const { error: insertErr } = await supabase.from("applications").insert({
+      applicant_id : profile.id,           // ログインユーザ
+      sales_rep_id : profile.id,           // 今回は同じ ID を登録
+      status       : "submitted",          // 初期ステータス
+      company_name : form.company_name,
+      company_address: `${form.prefecture}${form.city}${form.sub_area}${form.building_room}`,
+      representative_name: form.representative_name,
+      phone_number : form.contact_phone,
+      email        : form.contact_email,
+      contact_name : form.contact_person,
+      contact_email: form.contact_email,
+      created_at   : new Date().toISOString(),
+    });
 
-    const signatureLink = `${Deno.env.get('PUBLIC_URL')}/sign/`; // applicationId無いので仮リンク
+    if (insertErr) throw insertErr;
 
-    const toList = ["info@aquatutorai.jp", contact_email, signed_in_email].filter(Boolean); // null/undefined除去
+    /* ---------- ② PDF 生成 ---------- */
+    const pdfBytes  = await makePdf(form);
+    const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
+
+    /* ---------- ③ Resend 送信 ---------- */
+    const resend = new Resend(Deno.env.get("RESEND_API_KEY")!);
+
+    const toList = [
+      "info@aquatutorai.jp",
+      contact_email,
+      signed_in_email,
+    ].filter(Boolean) as string[];
 
     for (const to of toList) {
-      const { error: resendError } = await resend.emails.send({
-        from: 'AquaTutorAI <info@aquatutorai.jp>',
+      const { error } = await resend.emails.send({
+        from   : "AquaTutorAI <info@aquatutorai.jp>",
         to,
-        subject: '契約書の確認とご署名のお願い',
-        html: `
-    <!DOCTYPE html>
-    <html>
-    <body>
-      <p>契約書のご確認をお願いいたします。</p>
-      <p>以下のリンクから契約書の内容をご確認いただき、ご署名をお願いいたします。</p>
-      <p><a href="${signatureLink}">契約書の確認とご署名</a></p>
-      <p style="color: #666; font-size: 12px;">※本メールに心当たりがない場合は、破棄していただきますようお願いいたします。</p>
-    </body>
-    </html>
+        subject: "契約書（PDF）をお送りします",
+        attachments: [{
+          filename   : "aqua_application.pdf",
+          content    : pdfBase64,
+          contentType: "application/pdf",
+        }],
+        html : `
+          <p>契約書を PDF でお送りいたします。</p>
+          <p>添付ファイルをご確認のうえ、ご署名手続きへお進みください。</p>
+          <p style="color:#666;font-size:12px;">本メールに心当たりがない場合は破棄してください。</p>
         `,
-        text: `
-    契約書のご確認をお願いいたします。
-    
-    以下のリンクから契約書の内容をご確認いただき、ご署名をお願いいたします。
-    ${signatureLink}
-    
-    ※本メールに心当たりがない場合は、破棄していただきますようお願いいたします。
-        `
-      });
-    
-      if (resendError) {
-        throw new Error(`送信先 ${to} でエラー: ${resendError.message}`);
-      }
-    }
-    
+        text : `
+契約書を PDF でお送りいたします。
+添付ファイルをご確認のうえ、ご署名手続きへお進みください。
 
+※本メールに心当たりがない場合は破棄してください。
+        `,
+      });
+      if (error) throw new Error(`送信先 ${to} でエラー: ${error.message}`);
+    }
+
+    /* ---------- ④ レスポンス ---------- */
     return new Response(
-      JSON.stringify({ message: 'Contract sent successfully' }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
+      JSON.stringify({ message: "DB 登録 & PDF 付きメールを送信しました" }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
     );
-  } catch (error) {
-    console.error('Function Error:', error);
+
+  } catch (err) {
+    console.error("Function Error:", err);
     return new Response(
-      JSON.stringify({
-        error: error.message,
-        type: error.name,
-        details: error.stack,
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      }
+      JSON.stringify({ error: err.message, stack: err.stack }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 },
     );
   }
 });

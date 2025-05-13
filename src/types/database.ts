@@ -27,8 +27,6 @@ export type Application = {
   contract_id: string;
   applicant_id: string;
   sales_rep_id: string | null;
-  contact_name: string;
-  contact_email: string;
   status: 'draft' | 'submitted' | 'under_review' | 'approved' | 'rejected';
   company_name: string;
   company_address: string;
@@ -39,6 +37,10 @@ export type Application = {
   updated_at: string;
   submitted_at: string | null;
   approved_at: string | null;
+  contact_name: string;
+  contact_email: string;
+  original_pdf_url: string;
+  signed_pdf_url: string;
   contracts?: Contract;
 }
 

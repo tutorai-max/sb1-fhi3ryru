@@ -5,6 +5,8 @@ import { format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import type { Application } from '../types/database';
+import { Pencil } from 'lucide-react';
+
 
 export default function DashboardPage() {
   const { user, signOut } = useAuth();
@@ -67,6 +69,11 @@ export default function DashboardPage() {
         contactInfo 
       } 
     });
+  };
+
+  // 申請の編集ページへ遷移
+  const handleEdit = (id: string) => {
+    navigate(`/apply?id=${id}`);   // 例：/apply?id=abcdef
   };
 
   const fetchApplications = async () => {
@@ -189,7 +196,17 @@ export default function DashboardPage() {
                             {application.contracts?.name}
                           </p>
                         </div>
-                        {getStatusBadge(application.status)}
+                        {/* {getStatusBadge(application.status)} */}
+                        <div className="flex items-center space-x-2">
+                          {getStatusBadge(application.status)}
+                          <button
+                            onClick={() => handleEdit(application.id)}
+                            className="p-1 text-gray-500 hover:text-blue-700 transition"
+                            title="編集"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
                       <div className="mt-2 sm:flex sm:justify-between">
                         <div className="sm:flex">
