@@ -28,7 +28,7 @@ interface FormData {
 }
 
 export default function ApplyPage() {
-  const { currentUser } = useAuth(); // 追加
+  const { user } = useAuth(); // 追加
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<Step>('contract');
   const [formData, setFormData] = useState<FormData>({
@@ -99,11 +99,11 @@ export default function ApplyPage() {
     if (currentStep === 'contract') {
       setCurrentStep('company');
     } else if (currentStep === 'company') {
-      console.error('currentUser:', currentUser);
-      console.log('currentUser:', currentUser);
+      console.error('user:', user);
+      console.log('user:', user);
       const submitData = {
         ...formData,
-        signed_in_email: currentUser?.email || '',  // ← ここで追加！
+        signed_in_email: user?.email || '',  // ← ここで追加！
       };
       // ConfirmPage.tsx にフォームデータを渡して遷移
       navigate('/confirm', { state: { formData: submitData }});

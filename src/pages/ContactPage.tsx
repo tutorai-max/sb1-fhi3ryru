@@ -25,7 +25,7 @@ export default function ContactPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
-  const { currentUser } = useAuth(); // 追加
+  const { user } = useAuth(); // 追加
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -47,7 +47,7 @@ export default function ContactPage() {
     const submitData = {
       ...formData,
       type: formData.type.join(','),
-      signed_in_email: currentUser?.email || '',  // ← ここで追加！
+      signed_in_email: user?.email || '',  // ← ここで追加！
     };
 
     try {
