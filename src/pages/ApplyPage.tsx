@@ -99,6 +99,8 @@ export default function ApplyPage() {
     if (currentStep === 'contract') {
       setCurrentStep('company');
     } else if (currentStep === 'company') {
+      console.error('currentUser:', currentUser);
+      console.log('currentUser:', currentUser);
       const submitData = {
         ...formData,
         signed_in_email: currentUser?.email || '',  // ← ここで追加！
