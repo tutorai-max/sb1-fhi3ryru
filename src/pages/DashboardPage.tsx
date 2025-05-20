@@ -81,11 +81,7 @@ export default function DashboardPage() {
       const { data, error } = await supabase
         .from('applications')
         .select(`
-          *,
-          contracts (
-            name,
-            description
-          )
+          *
         `)
         .eq('applicant_id', user?.id)
         .order('created_at', { ascending: false });
