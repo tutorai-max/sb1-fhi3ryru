@@ -26,8 +26,7 @@ export default function SignPage() {
       const { data: applicationData, error: applicationError } = await supabase
         .from('applications')
         .select(`
-          *,
-          contracts (*)
+          *
         `)
         .eq('id', id)
         .single();
@@ -48,17 +47,17 @@ export default function SignPage() {
     try {
       setSignatureData(signature);
       
-      const { error: signatureError } = await supabase
-        .from('signatures')
-        .insert([
-          {
-            application_id: id,
-            signature_data: signature,
-            signed_by: application?.applicant_id,
-          }
-        ]);
+      // const { error: signatureError } = await supabase
+      //   .from('signatures')
+      //   .insert([
+      //     {
+      //       application_id: id,
+      //       signature_data: signature,
+      //       signed_by: application?.applicant_id,
+      //     }
+      //   ]);
 
-      if (signatureError) throw signatureError;
+      // if (signatureError) throw signatureError;
 
       // Update application status
       const { error: updateError } = await supabase
@@ -66,6 +65,7 @@ export default function SignPage() {
         .update({
           status: 'approved',
           approved_at: new Date().toISOString(),
+          sign_name: signature,
         })
         .eq('id', id);
 

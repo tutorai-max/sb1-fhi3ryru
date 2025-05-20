@@ -73,7 +73,8 @@ export default function DashboardPage() {
 
   // 申請の編集ページへ遷移
   const handleEdit = (id: string) => {
-    navigate(`/apply?id=${id}`);   // 例：/apply?id=abcdef
+    navigate(`/sign/${id}`);  // ← クエリではなくパスに `id` を含める
+    // navigate(`/apply?id=${id}`);   // 例：/apply?id=abcdef
   };
 
   const fetchApplications = async () => {

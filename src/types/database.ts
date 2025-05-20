@@ -41,6 +41,7 @@ export type Application = {
   contact_email: string;
   original_pdf_url: string;
   signed_pdf_url: string;
+  sign_name?: string;
   contracts?: Contract;
 }
 
