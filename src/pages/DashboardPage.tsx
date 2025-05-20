@@ -189,7 +189,10 @@ export default function DashboardPage() {
                         <div className="flex items-center">
                           <FileText className="h-5 w-5 text-gray-400" />
                           <p className="ml-2 text-sm font-medium text-gray-900">
-                            {application.contracts?.name}
+                            {application.contact_name}
+                          </p>
+                          <p className="ml-2 text-sm font-medium text-gray-900">
+                            {application.contact_email}
                           </p>
                         </div>
                         {/* {getStatusBadge(application.status)} */}
@@ -215,6 +218,9 @@ export default function DashboardPage() {
                           <Clock className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
                           <p>
                             申請日: {format(new Date(application.created_at), 'yyyy/MM/dd')}
+                          </p>
+                          <p>
+                            作成者アドレス: {user?.email || ''}
                           </p>
                         </div>
                       </div>
