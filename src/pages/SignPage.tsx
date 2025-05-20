@@ -90,7 +90,7 @@ export default function SignPage() {
     );
   }
 
-  if (error || !application || !contract) {
+  if (error || !application ) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -120,7 +120,7 @@ export default function SignPage() {
               <h2 className="text-xl font-bold text-gray-900 mb-4">契約書の内容をご確認ください</h2>
               <div className="h-[600px] border rounded-lg overflow-hidden">
                 <PDFViewer width="100%" height="100%" className="border-0">
-                  <ContractPDF contract={contract} application={application} />
+                  {/* <ContractPDF contract={contract} application={application} /> */}
                 </PDFViewer>
               </div>
             </div>
