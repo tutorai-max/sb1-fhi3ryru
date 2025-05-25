@@ -7,7 +7,7 @@ interface SignaturePadProps {
   height?: number;
 }
 
-const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, width = 500, height = 200 }) => {
+const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, width = 5000, height = 200 }) => {
   const sigPad = useRef<SignatureCanvas>(null);
 
   const clear = () => {

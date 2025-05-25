@@ -6,8 +6,11 @@ import { supabase } from '../lib/supabase';
 import ContractPDF from '../components/ContractPDF';
 import SignaturePad from '../components/SignaturePad';
 import type { Application, Contract } from '../types/database';
+import { pdf } from '@react-pdf/renderer';
+import { useAuth } from '../contexts/AuthContext'; // 追加
 
 export default function SignPage() {
+  const { user } = useAuth(); // 追加
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [application, setApplication] = useState<Application | null>(null);
@@ -71,6 +74,42 @@ export default function SignPage() {
 
       if (updateError) throw updateError;
 
+      // 2. 最新レコードを取り直す
+      const { data: updated, error: fetchErr } = await supabase
+        .from('applications')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (fetchErr || !updated) throw fetchErr;   // ← ここが “formData” 代わり
+
+      console.log('Updated application:', updated);
+
+
+
+
+
+      // 3. PDF → Blob → Base64
+      const blob   = await pdf(<ContractPDF application={updated} />).toBlob();
+      const buffer = await blob.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(buffer).reduce((s, b) => s + String.fromCharCode(b), '')
+      );
+
+      // 4. Edge Function へ一括送信
+      const { error: sendErr } = await supabase.functions.invoke(
+        'sendpdf',   // ← 「PDF添付メールも送る」関数
+        {
+          body: {
+            ...updated,       // 申請フィールド一式
+            pdf_base64: base64,
+            signed_in_email: user?.email,  // ← 追加
+          },
+        }
+      );
+      if (sendErr) throw sendErr;
+
+
+
       navigate('/dashboard', { 
         state: { message: '署名が完了しました。契約書のPDFをメールで送信いたします。' }
       });
@@ -121,6 +160,7 @@ export default function SignPage() {
               <div className="h-[600px] border rounded-lg overflow-hidden">
                 <PDFViewer width="100%" height="100%" className="border-0">
                   {/* <ContractPDF contract={contract} application={application} /> */}
+                  <ContractPDF application={application} />
                 </PDFViewer>
               </div>
             </div>

@@ -1,11 +1,31 @@
 import React from 'react';
-import { Page, Text, View, Document, StyleSheet, Font } from '@react-pdf/renderer';
+import { Page, Text, View, Document, StyleSheet, Font, Image  } from '@react-pdf/renderer';
 import type { Contract, Application } from '../types/database';
 
 Font.register({
   family: 'NotoSansJP',
   src: 'https://fonts.gstatic.com/ea/notosansjp/v5/NotoSansJP-Regular.otf'
 });
+// フォームデータの型定義（ApplyPage.tsx と一致させる必要があります）
+interface FormData {
+  company_name: string;
+  postal_code: string;
+  prefecture: string;
+  city: string;
+  sub_area: string;
+  building_room: string;
+  representative_name: string;
+  contact_person: string;
+  contact_phone: string;
+  contact_email: string;
+  initial_fee: string;
+  monthly_fee: string;
+  excess_fee: string;
+  option_fee: string;
+  payment_method: string;
+  notes: string;
+  signed_in_email: string; // サインイン時のメールアドレス
+}
 
 const styles = StyleSheet.create({
   page: {
@@ -33,7 +53,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   table: {
-    display: 'table',
+    // display: 'table',
     width: '100%',
     marginBottom: 10,
   },
@@ -87,14 +107,20 @@ const styles = StyleSheet.create({
     padding: 10,
     minHeight: 100,
   },
+  signatureImage: {
+    marginTop: 6,
+    width: 120,
+    height: 50,   // お好みで
+    objectFit: 'contain',
+  },
 });
 
 interface ContractPDFProps {
-  contract: Contract;
-  application: Application;
+  // contract: Contract;
+  application: Application | FormData;
 }
 
-const ContractPDF: React.FC<ContractPDFProps> = ({ contract, application }) => {
+const ContractPDF: React.FC<ContractPDFProps> = ({ application }) => {
   const today = new Date();
   const year = today.getFullYear();
   const month = today.getMonth() + 1;
@@ -160,7 +186,7 @@ const ContractPDF: React.FC<ContractPDFProps> = ({ contract, application }) => {
             1. 乙は以下の料金を甲に支払うものとする：
           </Text>
           <Text style={styles.text}>
-            契約金額：{contract.amount.toLocaleString()}円（税別）
+            契約金額：{Number(application.initial_fee) + Number(application.monthly_fee) * 12 + Number(application.option_fee)}円（税別）
           </Text>
           <Text style={styles.text}>
             2. 支払いは原則として12ヶ月分一括前払いとする。IT導入補助金を使用しない場合はこの限りではない。
@@ -178,23 +204,35 @@ const ContractPDF: React.FC<ContractPDFProps> = ({ contract, application }) => {
             </View>
             <View style={styles.formField}>
               <Text style={styles.formLabel}>所在地：</Text>
-              <Text style={styles.formValue}>{application.company_address}</Text>
-            </View>
+              <Text style={styles.formValue}>
+                {'company_address' in application
+                  ? application.company_address
+                  : `${application.prefecture}${application.city}${application.sub_area}${application.building_room}`}
+              </Text>
+          </View>
             <View style={styles.formField}>
               <Text style={styles.formLabel}>代表者名：</Text>
               <Text style={styles.formValue}>{application.representative_name}</Text>
             </View>
             <View style={styles.formField}>
               <Text style={styles.formLabel}>連絡先：</Text>
-              <Text style={styles.formValue}>{application.phone_number}</Text>
+              <Text style={styles.formValue}>
+                {'contact_phone' in application
+                  ? application.contact_phone
+                  : application.phone_number}
+              </Text>
             </View>
             <View style={styles.formField}>
               <Text style={styles.formLabel}>メール：</Text>
-              <Text style={styles.formValue}>{application.email}</Text>
+              <Text style={styles.formValue}>
+                {'email' in application
+                  ? application.email
+                  : application.contact_email}
+              </Text>
             </View>
           </View>
 
-          <View style={styles.formSection}>
+          {/* <View style={styles.formSection}>
             <Text style={styles.heading}>2. 研修項目</Text>
             {contract.training_items.map((item, index) => (
               <Text key={index} style={styles.text}>
@@ -213,7 +251,7 @@ const ContractPDF: React.FC<ContractPDFProps> = ({ contract, application }) => {
               <Text style={styles.heading}>4. 特記事項</Text>
               <Text style={styles.text}>{contract.special_notes}</Text>
             </View>
-          )}
+          )} */}
         </View>
 
         <View style={styles.signatureSection}>
@@ -227,9 +265,21 @@ const ContractPDF: React.FC<ContractPDFProps> = ({ contract, application }) => {
           <View style={styles.signatureBox}>
             <Text style={styles.text}>乙：</Text>
             <Text style={styles.text}>{application.company_name}</Text>
-            <Text style={styles.text}>{application.company_address}</Text>
+            <Text style={styles.text}>               
+              {'company_address' in application
+                  ? application.company_address
+                  : `${application.prefecture}${application.city}${application.sub_area}${application.building_room}`}
+            </Text>
             <Text style={styles.text}>{application.representative_name}</Text>
             <Text style={styles.text}>{year}年{month}月{day}日</Text>
+            {/* 署名画像（Application 型に sign_name がある場合だけ表示） */}
+            {'sign_name' in application && application.sign_name && (
+              <Image
+                src={application.sign_name}   // data:image/png;base64,…
+                style={styles.signatureImage}
+              />
+            )}
+
           </View>
         </View>
       </Page>

@@ -1,6 +1,10 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { Resend } from "resend";
+import { renderToBuffer } from '@react-pdf/renderer';
+import ContractPDF from '../components/ContractPDF';
+import { pdf } from '@react-pdf/renderer';
 
 // フォームデータの型定義（ApplyPage.tsx と一致させる必要があります）
 interface FormData {
@@ -20,6 +24,7 @@ interface FormData {
   option_fee: string;
   payment_method: string;
   notes: string;
+  signed_in_email: string; // サインイン時のメールアドレス
 }
 
 export default function ConfirmPage() {
@@ -40,11 +45,30 @@ export default function ConfirmPage() {
   const handleApprove = async () => {
     try {
       console.error('tyyyy:');
+      console.error(formData);      
+      
+      // ① PDF Blob
+      const blob = await pdf(<ContractPDF application={formData} />).toBlob();
+
+      // ② Blob → ArrayBuffer → Base64
+      const buffer = await blob.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(buffer).reduce((s, b) => s + String.fromCharCode(b), '')
+      );
+
+
+
+
+
+
       // 1. 申請データを保存
       const { error: saveError } = await supabase.functions.invoke(
         'save-application',
         {
-          body: { ...formData },
+          body: { 
+            ...formData,
+            pdf_base64: base64,   // ← 追加 
+          },
         }
       );
       console.error('saveError:', saveError);
@@ -71,6 +95,7 @@ export default function ConfirmPage() {
       // console.error('confirmError:', confirmError);
       // if (confirmError)
       //   throw new Error(`Confirm Contract Error: ${confirmError.message}`);
+
 
       // 成功したらダッシュボードに遷移
       navigate('/dashboard', {

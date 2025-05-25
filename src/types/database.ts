@@ -42,6 +42,10 @@ export type Application = {
   original_pdf_url: string;
   signed_pdf_url: string;
   sign_name?: string;
+  initial_fee: string;
+  monthly_fee: string;
+  excess_fee: string;
+  option_fee: string;
   contracts?: Contract;
 }
 

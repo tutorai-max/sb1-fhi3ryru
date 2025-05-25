@@ -50,7 +50,7 @@ export default function LoginPage() {
           <Building2 className="h-12 w-12 text-blue-900" />
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          営業担当者ログインqqqqqaa
+          営業担当者ログイン
         </h2>
       </div>
 
